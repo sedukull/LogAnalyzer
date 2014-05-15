@@ -1,0 +1,136 @@
+
+<!-- search solution -->
+<html>
+<head>
+
+<script type="text/javascript" src="3rd-party/jquery/1.7.1/jquery-1.7.1.min.js"></script>
+<script type="text/javascript" src="3rd-party/bootstrap/js/bootstrap.js"></script>
+<link rel="stylesheet" href="3rd-party/bootstrap/css/bootstrap.min.css" />
+
+<script>
+	
+</script>
+
+
+<script>
+	jQuery(document).ready(function ($) {
+		
+		function showjson(data) {
+			var table = '<table class="table-condensed table-striped ">';
+			var rows  = '';
+			var tablehdr = '<tr>';
+			tablehdr += '<th>file</th><th>level</th><th>time</th><th>log</th>';
+			tablehdr += '</tr>';
+			
+			for (var index = 0; index < parseInt(data.hits.total); index++) {				
+				rows += '<tr>';
+				rows += '<td>'+ data.hits.hits[index]._source.file +'</td>';
+				rows += '<td>'+ data.hits.hits[index]._source.level +'</td>';
+				rows += '<td>'+ data.hits.hits[index]._source.time +'</td>';
+				rows += '<td>'+ data.hits.hits[index]._source.line +'</td>';
+				rows += '</tr>';
+			}
+
+			table += tablehdr;
+			table += rows;
+			table += '</table>';
+			//alert(table);
+			$('#results').html(table);
+		}
+		
+		$.ajax({
+			url: "http://localhost:9200/test/_search",
+			type: 'post',
+			data: JSON.stringify({}),
+			crossDomain: false,
+			dataType: 'json',
+			success: function (json, message, error) {
+				//alert('success :'+json.hits.total);
+				$('#totalrecords').html( json.hits.total + " logs found");
+			},
+			error: function (json, message, error) {
+				//alert('err :'+message);
+				$('#totalrecords').html( "0 logs found");
+			}
+		});
+	
+		$('#srchbtn').click( function() {
+			
+			query = {
+				"size" : 100000,
+				"query": {
+					"bool": {
+						"must" :[
+							{"wildcard" : {"file" : $('#filename').val() }},
+							{"wildcard" : {"level" : $('#loglevel').val() }},
+							{"range": {"time" : {"gte":$('#starttime').val() , "lte":$('#endtime').val()}}}
+						]
+					}
+				}
+			};
+			
+			alert(JSON.stringify(query));
+			
+			$.ajax({
+				url: "http://localhost:9200/test/_search",
+				type: 'post',
+				data: JSON.stringify(query),
+				crossDomain: false,
+				dataType: 'json',
+				success: function (json, message, error) {
+					$('#totalrecords').html( json.hits.total + " logs found");
+					//alert(JSON.stringify(json));
+					showjson(json);
+				},
+				error: function (json, message, error) {
+					$('#totalrecords').html("0 logs found");
+					$('#results').html( "Error : "+ error);
+				}
+			});
+		
+			
+			
+		});
+
+	});
+
+</script>
+
+
+</head>
+<body>
+	<div class="container">
+        <div class="content">
+            <div class="page-header">
+                <h3>
+					Search Logs
+					<div id="totalrecords"> </div>
+				</h3>
+            </div>
+			<div class="span4">
+				<div class="well span4">
+					  <label>File name</label>
+						<input id="filename" type="text" class="span4 pull-left" placeholder="awsapi.log OR management-server.log OR apilog.log...">
+					  
+					  <label>Log level</label>
+						<input id="loglevel" type="text" class="span3" placeholder="info or debug etc..">
+						
+					  <label>Start time </label>
+						<input id="starttime" type="text" class="span3" placeholder="Eg: 2013-11-01T00:59:53…">
+					
+					  <label>End time </label>
+						<input id="endtime" type="text" class="span3" placeholder="Eg: 2013-11-31T21:59:53…">
+					  
+					  <br/>
+					  <button id="srchbtn" type="submit" class="btn">Submit</button>
+				</div>
+				
+				<div class ="well span10">
+					<h4> Results </h4>
+					<div id="results"></div>
+				</div>
+			</div>
+        </div>
+    </div>
+</body>
+</html>
